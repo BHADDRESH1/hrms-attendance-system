@@ -18,9 +18,25 @@ class Settings(BaseSettings):
     def assemble_db_url(cls, v: str) -> str:
         if isinstance(v, str):
             if v.startswith("postgresql://"):
-                return v.replace("postgresql://", "postgresql+asyncpg://", 1)
+                v = v.replace("postgresql://", "postgresql+asyncpg://", 1)
             elif v.startswith("postgres://"):
-                return v.replace("postgres://", "postgresql+asyncpg://", 1)
+                v = v.replace("postgres://", "postgresql+asyncpg://", 1)
+                
+            # Strip unsupported 'pgbouncer' query parameter for asyncpg compatibility
+            from urllib.parse import urlparse, urlunparse, parse_qsl, urlencode
+            parsed = urlparse(v)
+            query_params = parse_qsl(parsed.query)
+            filtered_params = [(k, val) for k, val in query_params if k.lower() != "pgbouncer"]
+            
+            new_query = urlencode(filtered_params)
+            v = urlunparse((
+                parsed.scheme,
+                parsed.netloc,
+                parsed.path,
+                parsed.params,
+                new_query,
+                parsed.fragment
+            ))
         return v
 
     # Supabase Settings
