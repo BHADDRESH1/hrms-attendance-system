@@ -6,6 +6,8 @@ from app.config import settings
 from app.core.exceptions import register_exception_handlers
 from app.modules.employees.router import router as employees_router
 from app.modules.attendance.router import router as attendance_router
+from app.modules.analytics.router import router as analytics_router
+
 
 # Configure logging
 logging.basicConfig(
@@ -42,6 +44,7 @@ register_exception_handlers(app)
 # Include Modular Routers
 app.include_router(employees_router, prefix=f"{settings.API_V1_STR}/employees")
 app.include_router(attendance_router, prefix=f"{settings.API_V1_STR}/attendance")
+app.include_router(analytics_router, prefix=f"{settings.API_V1_STR}/analytics")
 
 @app.get("/health", tags=["System Health"])
 async def health_check():
