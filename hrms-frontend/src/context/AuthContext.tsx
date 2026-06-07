@@ -44,13 +44,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
 
       // Fetch user's role from Supabase user_roles table
+      console.log("[AuthContext] Querying role for email:", email);
       const { data: roleData, error: roleError } = await supabase
         .from('user_roles')
         .select('role')
         .eq('email', email)
         .single();
 
+      console.log("Logged in email:", session.user.email);
+      console.log("Retrieved role:", roleData?.role);
+
+      console.log("[AuthContext] Query results:", { roleData, roleError });
+
       if (roleError || !roleData || !roleData.role) {
+        console.error("[AuthContext] Role retrieval failed:", roleError);
         throw new Error("No role assigned to this user");
       }
 

@@ -80,7 +80,14 @@ async def get_current_employee(
                 new_user_id = uuid.UUID(supabase_uid)
                 
                 try:
-                    # Insert new user row copying attributes
+                    # 1. Update old user's email to a temporary name to release the unique constraint
+                    temp_email = f"old_{old_user_id}_{user.email}"
+                    await db.execute(
+                        text("UPDATE users SET email = :temp_email WHERE id = :old_id"),
+                        {"temp_email": temp_email, "old_id": old_user_id}
+                    )
+                    
+                    # 2. Insert new user row copying attributes
                     await db.execute(
                         text("INSERT INTO users (id, email, role_id, is_active, created_at, updated_at) "
                              "VALUES (:new_id, :email, :role_id, :is_active, :created_at, :updated_at)"),
@@ -93,12 +100,12 @@ async def get_current_employee(
                             "updated_at": user.updated_at
                         }
                     )
-                    # Point employee to the new user row
+                    # 3. Point employee to the new user row
                     await db.execute(
                         text("UPDATE employees SET user_id = :new_id WHERE id = :emp_id"),
                         {"new_id": new_user_id, "emp_id": employee.id}
                     )
-                    # Delete old user row
+                    # 4. Delete old user row
                     await db.execute(
                         text("DELETE FROM users WHERE id = :old_id"),
                         {"old_id": old_user_id}
@@ -116,6 +123,10 @@ async def get_current_employee(
                 except Exception as link_err:
                     await db.rollback()
                     print(f"Error dynamically linking Supabase UID: {link_err}", flush=True)
+                    raise HTTPException(
+                        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                        detail=f"Database error during account linking: {link_err}"
+                    )
 
     if not employee:
         raise HTTPException(
