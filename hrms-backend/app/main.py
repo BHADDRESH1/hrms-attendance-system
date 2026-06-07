@@ -9,6 +9,8 @@ from app.core.exceptions import register_exception_handlers
 from app.modules.employees.router import router as employees_router
 from app.modules.attendance.router import router as attendance_router
 
+import collections
+
 # Configure logging
 logging.basicConfig(
     level=logging.INFO,
@@ -16,6 +18,31 @@ logging.basicConfig(
     force=True,
 )
 logger = logging.getLogger("uvicorn.error")
+
+class InMemoryLogHandler(logging.Handler):
+    def __init__(self, capacity=500):
+        super().__init__()
+        self.capacity = capacity
+        self.buffer = collections.deque(maxlen=capacity)
+
+    def emit(self, record):
+        try:
+            msg = self.format(record)
+            self.buffer.append(msg)
+        except Exception:
+            self.handleError(record)
+
+    def get_logs(self):
+        return list(self.buffer)
+
+in_memory_log_handler = InMemoryLogHandler()
+in_memory_log_handler.setFormatter(logging.Formatter("%(asctime)s [%(levelname)s] %(name)s: %(message)s"))
+in_memory_log_handler.setLevel(logging.INFO)
+
+logging.getLogger().addHandler(in_memory_log_handler)
+logging.getLogger("uvicorn").addHandler(in_memory_log_handler)
+logging.getLogger("uvicorn.error").addHandler(in_memory_log_handler)
+logging.getLogger("uvicorn.access").addHandler(in_memory_log_handler)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -149,4 +176,12 @@ async def health_check():
         "status": "healthy",
         "app_name": settings.APP_NAME,
         "environment": "development" if settings.DEBUG else "production"
+    }
+
+@app.get("/api/v1/debug/logs", tags=["Debug"])
+async def get_debug_logs():
+    return {
+        "status": "active",
+        "latest_commit": "CORS-Diagnostics",
+        "logs": in_memory_log_handler.get_logs()
     }
