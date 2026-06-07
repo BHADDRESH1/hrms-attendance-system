@@ -123,6 +123,50 @@ async def get_current_employee(
             detail="Employee profile not found in HRMS database. Contact administrator."
         )
 
+    # Sync role dynamically from Supabase user_roles table
+    try:
+        import httpx
+        from jose import jwt
+        from app.config import settings
+        from app.modules.employees.models import Role
+
+        email = employee.user.email
+        claims_token = {
+            "aud": "authenticated",
+            "role": "service_role"
+        }
+        srv_token = jwt.encode(claims_token, settings.SUPABASE_JWT_SECRET, algorithm="HS256")
+        headers = {
+            "apikey": settings.SUPABASE_ANON_KEY,
+            "Authorization": f"Bearer {srv_token}"
+        }
+        url = f"{settings.SUPABASE_URL}/rest/v1/user_roles?email=eq.{email}&select=role"
+
+        async with httpx.AsyncClient() as client:
+            resp = await client.get(url, headers=headers)
+            if resp.status_code == 200:
+                data = resp.json()
+                if data and len(data) > 0:
+                    supabase_role = data[0]["role"]
+                    if employee.user.role.name != supabase_role:
+                        role_res = await db.execute(
+                            select(Role).where(Role.name == supabase_role)
+                        )
+                        db_role = role_res.scalar_one_or_none()
+                        if db_role:
+                            employee.user.role_id = db_role.id
+                            await db.commit()
+                            # Refresh employee object to fetch new role relationship
+                            result = await db.execute(
+                                select(Employee)
+                                .where(Employee.id == employee.id)
+                                .options(selectinload(Employee.user).selectinload(User.role))
+                            )
+                            employee = result.scalar_one()
+                            print(f"Synced role for {email} to {supabase_role} on the fly", flush=True)
+    except Exception as sync_err:
+        print(f"Error syncing role from Supabase: {sync_err}", flush=True)
+
     if not employee.user.is_active:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,

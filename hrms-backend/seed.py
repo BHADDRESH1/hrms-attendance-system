@@ -34,6 +34,7 @@ async def seed_database():
             # 2. Seed Users
             users = [
                 {"id": "08549059-6def-4d84-a70d-aea56cf4757f", "email": "amudalahari65@gmail.com", "role_id": "6f307a09-ab0b-474d-bb66-42bf25472f3a"},
+                {"id": "c76d1e40-02bf-4632-bd9b-5fb8b13be1a7", "email": "bbuvasree.n@gmail.com", "role_id": "6f307a09-ab0b-474d-bb66-42bf25472f3a"},
                 {"id": "d3e5453e-a897-48ea-a925-d284ed7f6f91", "email": "bhaddreshamudala@gmail.com", "role_id": "94d206da-6182-4f8a-8d68-8557a43d29eb"},
                 {"id": "9cfec8a8-1761-4173-82ba-4851ee56c975", "email": "gmaheshbabu2009@gmail.com", "role_id": "b98208d4-cdc4-491a-9a9d-39c7b44caedb"}
             ]
@@ -47,6 +48,7 @@ async def seed_database():
             # 3. Seed Employees
             employees = [
                 {"id": "f3b9313d-a742-45a1-8c5b-cebbcc454ac9", "user_id": "08549059-6def-4d84-a70d-aea56cf4757f", "employee_id_code": "SA001", "first_name": "Hari", "last_name": "Admin", "designation": "Principal Admin", "reporting_manager": "None"},
+                {"id": "766a5068-1549-417b-ab92-9599d146bf99", "user_id": "c76d1e40-02bf-4632-bd9b-5fb8b13be1a7", "employee_id_code": "SA002", "first_name": "Buvasree", "last_name": "Admin", "designation": "Principal Admin", "reporting_manager": "None"},
                 {"id": "affe8ea4-0fc6-48f8-9326-399592ab5c28", "user_id": "d3e5453e-a897-48ea-a925-d284ed7f6f91", "employee_id_code": "AD001", "first_name": "Bhaddresh", "last_name": "Admin", "designation": "HR Director", "reporting_manager": "Hari Admin"},
                 {"id": "5e8a3da4-f645-4f63-bcb6-fceb7e53aa8f", "user_id": "9cfec8a8-1761-4173-82ba-4851ee56c975", "employee_id_code": "EMP001", "first_name": "Mahesh", "last_name": "Employee", "designation": "Senior Associate", "reporting_manager": "Bhaddresh Admin"}
             ]
