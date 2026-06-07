@@ -12,8 +12,9 @@ from app.modules.attendance.router import router as attendance_router
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
+    force=True,
 )
-logger = logging.getLogger("hrms_api")
+logger = logging.getLogger("uvicorn.error")
 
 app = FastAPI(
     title=settings.APP_NAME,
@@ -22,7 +23,37 @@ app = FastAPI(
     debug=settings.DEBUG
 )
 
+class ASGILoggingMiddleware:
+    def __init__(self, app):
+        self.app = app
+
+    async def __call__(self, scope, receive, send):
+        if scope["type"] == "http":
+            method = scope["method"]
+            path = scope["path"]
+            headers = dict(scope.get("headers", []))
+            origin = headers.get(b"origin", b"").decode("utf-8") or None
+            
+            print(f"CORS Debug: incoming request method={method} path={path} origin={origin}", flush=True)
+            logger.info(f"CORS Debug: incoming request method={method} path={path} origin={origin}")
+            
+            start_time = time.time()
+            
+            async def send_wrapper(message):
+                if message["type"] == "http.response.start":
+                    status = message["status"]
+                    duration = (time.time() - start_time) * 1000
+                    print(f"CORS Debug: completed request method={method} path={path} - Status: {status} - Duration: {duration:.2f}ms", flush=True)
+                    logger.info(f"CORS Debug: completed request method={method} path={path} - Status: {status} - Duration: {duration:.2f}ms")
+                await send(message)
+                
+            await self.app(scope, receive, send_wrapper)
+        else:
+            await self.app(scope, receive, send)
+
+# Register middlewares
 # CORS Policy configuration matching Vercel domains (including any branch/preview deployments) and localhost
+# (added first, so it ends up as the inner layer compared to ASGILoggingMiddleware)
 app.add_middleware(
     CORSMiddleware,
     allow_origin_regex=r"^https://.*\.vercel\.app$|^http://localhost(:\d+)?$|^http://127\.0\.0\.1(:\d+)?$",
@@ -31,21 +62,8 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Request logging middleware
-@app.middleware("http")
-async def log_requests(request: Request, call_next):
-    start_time = time.time()
-    response = None
-    try:
-        response = await call_next(request)
-        return response
-    except Exception as e:
-        logger.error(f"Unhandled exception during request: {request.method} {request.url.path} - Error: {str(e)}", exc_info=True)
-        raise e
-    finally:
-        process_time = (time.time() - start_time) * 1000
-        status_code = response.status_code if response else 500
-        logger.info(f"{request.method} {request.url.path} - Status: {status_code} - Duration: {process_time:.2f}ms")
+# ASGI logging middleware is added last, so it inserts at index 0 and wraps CORSMiddleware, executing outermost
+app.add_middleware(ASGILoggingMiddleware)
 
 # Register exception handlers
 register_exception_handlers(app)
