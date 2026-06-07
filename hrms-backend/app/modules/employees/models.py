@@ -9,7 +9,7 @@ class Role(Base):
     __tablename__ = "roles"
 
     id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
-    name: Mapped[str] = mapped_column(String(50), unique=True, nullable=False) # 'Super Admin', 'Admin', 'Employee'
+    name: Mapped[str] = mapped_column(String(50), unique=True, nullable=False) # 'super_admin', 'admin', 'employee'
     description: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
 
     # Relationships

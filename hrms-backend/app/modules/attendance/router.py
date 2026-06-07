@@ -11,8 +11,8 @@ from app.modules.employees.models import Employee
 router = APIRouter(tags=["Attendance & Corrections"])
 
 # Role guards
-admin_or_higher = Depends(RoleChecker(allowed_roles=["Super Admin", "Admin"]))
-employee_or_higher = Depends(RoleChecker(allowed_roles=["Super Admin", "Admin", "Employee"]))
+admin_or_higher = Depends(RoleChecker(allowed_roles=["super_admin", "admin"]))
+employee_or_higher = Depends(RoleChecker(allowed_roles=["super_admin", "admin", "employee"]))
 
 # --- Core Punch Endpoints ---
 @router.post("/punch-in", response_model=schemas.AttendanceRead)
@@ -24,7 +24,13 @@ async def clock_in(
     """
     Log clock-in punch for the current authenticated employee.
     """
-    if current_emp.user.role.name != "Employee":
+    if current_emp.user.role.name == "super_admin":
+        from fastapi import HTTPException
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Super Admins cannot punch in or punch out."
+        )
+    elif current_emp.user.role.name != "employee":
         from fastapi import HTTPException
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
@@ -41,7 +47,13 @@ async def clock_out(
     """
     Log clock-out punch and compute total hours.
     """
-    if current_emp.user.role.name != "Employee":
+    if current_emp.user.role.name == "super_admin":
+        from fastapi import HTTPException
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Super Admins cannot punch in or punch out."
+        )
+    elif current_emp.user.role.name != "employee":
         from fastapi import HTTPException
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
@@ -74,7 +86,7 @@ async def get_employee_history_admin(
     start_date: date = Query(default_factory=lambda: date.today() - timedelta(days=30)),
     end_date: date = Query(default_factory=date.today),
     db: AsyncSession = Depends(get_db),
-    _auth = Depends(RoleChecker(allowed_roles=["Super Admin", "Admin"]))
+    _auth = Depends(RoleChecker(allowed_roles=["super_admin", "admin"]))
 ):
     """
     Fetch history logs for a specific employee (Admin/Super Admin only).
@@ -134,7 +146,7 @@ async def get_super_admin_analytics(
     start_date: date = Query(default_factory=lambda: date.today() - timedelta(days=30)),
     end_date: date = Query(default_factory=date.today),
     db: AsyncSession = Depends(get_db),
-    _auth = Depends(RoleChecker(allowed_roles=["Super Admin"]))
+    _auth = Depends(RoleChecker(allowed_roles=["super_admin"]))
 ):
     """
     Fetch super admin dashboard analytics metrics.
@@ -147,7 +159,7 @@ async def get_super_admin_employee_analytics(
     start_date: date = Query(default_factory=lambda: date.today() - timedelta(days=30)),
     end_date: date = Query(default_factory=date.today),
     db: AsyncSession = Depends(get_db),
-    _auth = Depends(RoleChecker(allowed_roles=["Super Admin"]))
+    _auth = Depends(RoleChecker(allowed_roles=["super_admin"]))
 ):
     """
     Fetch employee-wise metrics for the Super Admin analytics directory.
@@ -161,7 +173,7 @@ async def update_record_admin(
     update_in: schemas.AttendanceUpdateAdmin,
     db: AsyncSession = Depends(get_db),
     current_emp: Employee = Depends(get_current_employee),
-    _auth = Depends(RoleChecker(allowed_roles=["Super Admin"]))
+    _auth = Depends(RoleChecker(allowed_roles=["super_admin"]))
 ):
     """
     Manually edit an attendance record (Super Admin Override).
@@ -178,7 +190,7 @@ async def get_audit_logs(
     page: int = Query(1, ge=1),
     limit: int = Query(10, ge=1, le=100),
     db: AsyncSession = Depends(get_db),
-    _auth = Depends(RoleChecker(allowed_roles=["Super Admin"]))
+    _auth = Depends(RoleChecker(allowed_roles=["super_admin"]))
 ):
     """
     Fetch all approved attendance audit logs (Super Admin Override logs).
@@ -224,7 +236,7 @@ async def export_attendance_csv(
     end_date: Optional[date] = Query(None),
     status: Optional[str] = Query(None),
     db: AsyncSession = Depends(get_db),
-    _auth = Depends(RoleChecker(allowed_roles=["Super Admin"]))
+    _auth = Depends(RoleChecker(allowed_roles=["super_admin"]))
 ):
     from fastapi import Response
     records = await service.query_attendance_for_export(
@@ -248,7 +260,7 @@ async def export_attendance_xlsx(
     end_date: Optional[date] = Query(None),
     status: Optional[str] = Query(None),
     db: AsyncSession = Depends(get_db),
-    _auth = Depends(RoleChecker(allowed_roles=["Super Admin"]))
+    _auth = Depends(RoleChecker(allowed_roles=["super_admin"]))
 ):
     from fastapi import Response
     records = await service.query_attendance_for_export(
@@ -272,7 +284,7 @@ async def export_attendance_pdf(
     end_date: Optional[date] = Query(None),
     status: Optional[str] = Query(None),
     db: AsyncSession = Depends(get_db),
-    _auth = Depends(RoleChecker(allowed_roles=["Super Admin"]))
+    _auth = Depends(RoleChecker(allowed_roles=["super_admin"]))
 ):
     from fastapi import Response
     records = await service.query_attendance_for_export(

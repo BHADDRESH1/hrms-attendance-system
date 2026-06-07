@@ -150,7 +150,7 @@ async def request_attendance_edit(
         raise HRMSException(message="Attendance record not found.", status_code=404)
         
     # Standard employee can only edit their own records
-    if employee.user.role.name not in ["Super Admin", "Admin"] and attendance_rec.employee_id != employee.id:
+    if employee.user.role.name not in ["super_admin", "admin"] and attendance_rec.employee_id != employee.id:
         raise HRMSException(message="You do not have permission to request an edit for another employee's record.", status_code=403)
 
     # Prevent concurrent pending requests for the same record
@@ -658,7 +658,7 @@ async def get_employee_wise_analytics(
     
     for emp in employees:
         # Skip admins/super admins if they don't represent employees
-        if emp.user.role.name in ["Super Admin", "Admin"]:
+        if emp.user.role.name in ["super_admin", "admin"]:
             continue
             
         recs = emp_records[emp.id]

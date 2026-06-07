@@ -5,7 +5,7 @@ import uuid
 
 # --- Role Schemas ---
 class RoleBase(BaseModel):
-    name: str = Field(..., max_length=50) # 'Super Admin', 'Admin', 'Employee'
+    name: str = Field(..., max_length=50) # 'super_admin', 'admin', 'employee'
     description: Optional[str] = Field(None, max_length=255)
 
 class RoleCreate(RoleBase):

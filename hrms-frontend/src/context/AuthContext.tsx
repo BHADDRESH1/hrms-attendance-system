@@ -12,7 +12,7 @@ interface HRMSEmployee {
   first_name: string;
   last_name: string;
   email: string;
-  role: 'Super Admin' | 'Admin' | 'Employee';
+  role: 'super_admin' | 'admin' | 'employee';
   status: 'active' | 'suspended' | 'terminated';
 }
 
@@ -21,6 +21,7 @@ interface AuthContextType {
   employee: HRMSEmployee | null;
   session: Session | null;
   loading: boolean;
+  error: string | null;
   signOut: () => Promise<void>;
   refreshProfile: () => Promise<void>;
 }
@@ -32,9 +33,27 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [session, setSession] = useState<Session | null>(null);
   const [employee, setEmployee] = useState<HRMSEmployee | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   const refreshProfile = async () => {
     try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const email = session?.user?.email;
+      if (!email) {
+        throw new Error("No user email in session");
+      }
+
+      // Fetch user's role from Supabase user_roles table
+      const { data: roleData, error: roleError } = await supabase
+        .from('user_roles')
+        .select('role')
+        .eq('email', email)
+        .single();
+
+      if (roleError || !roleData || !roleData.role) {
+        throw new Error("No role assigned to this user");
+      }
+
       const response = await apiClient.get<any>('/employees/me');
       const data = response.data;
       const mappedEmployee: HRMSEmployee = {
@@ -44,23 +63,32 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         first_name: data.first_name,
         last_name: data.last_name,
         email: data.user?.email || '',
-        role: data.user?.role?.name || 'Employee',
+        role: roleData.role as 'super_admin' | 'admin' | 'employee',
         status: data.user?.is_active ? 'active' : 'suspended'
       };
       setEmployee(mappedEmployee);
-    } catch (error) {
-      console.error('Failed to load employee profile from backend:', error);
+    } catch (err: any) {
+      console.error('Failed to load employee profile from backend:', err);
       setEmployee(null);
+      throw err;
     }
   };
 
   useEffect(() => {
+    setError(null);
     // Check initial active session
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
       setSession(session);
       setSupabaseUser(session?.user ?? null);
       if (session) {
-        refreshProfile().finally(() => setLoading(false));
+        try {
+          await refreshProfile();
+        } catch (err: any) {
+          setError(err.message || "Failed to authenticate role");
+          await supabase.auth.signOut();
+        } finally {
+          setLoading(false);
+        }
       } else {
         setLoading(false);
       }
@@ -72,8 +100,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setSupabaseUser(session?.user ?? null);
       if (session) {
         setLoading(true);
-        await refreshProfile();
-        setLoading(false);
+        setError(null);
+        try {
+          await refreshProfile();
+        } catch (err: any) {
+          setError(err.message || "Failed to authenticate role");
+          await supabase.auth.signOut();
+        } finally {
+          setLoading(false);
+        }
       } else {
         setEmployee(null);
         setLoading(false);
@@ -86,11 +121,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, []);
 
   const signOut = async () => {
+    setError(null);
     await supabase.auth.signOut();
   };
 
   return (
-    <AuthContext.Provider value={{ supabaseUser, employee, session, loading, signOut, refreshProfile }}>
+    <AuthContext.Provider value={{ supabaseUser, employee, session, loading, error, signOut, refreshProfile }}>
       {children}
     </AuthContext.Provider>
   );

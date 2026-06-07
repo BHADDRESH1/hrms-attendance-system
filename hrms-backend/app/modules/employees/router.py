@@ -10,9 +10,9 @@ from app.modules.employees.models import Employee
 router = APIRouter(tags=["Employees & Organizations"])
 
 # Role guards
-super_admin_only = Depends(RoleChecker(allowed_roles=["Super Admin"]))
-admin_or_higher = Depends(RoleChecker(allowed_roles=["Super Admin", "Admin"]))
-employee_or_higher = Depends(RoleChecker(allowed_roles=["Super Admin", "Admin", "Employee"]))
+super_admin_only = Depends(RoleChecker(allowed_roles=["super_admin"]))
+admin_or_higher = Depends(RoleChecker(allowed_roles=["super_admin", "admin"]))
+employee_or_higher = Depends(RoleChecker(allowed_roles=["super_admin", "admin", "employee"]))
 
 # --- Role Endpoints ---
 @router.post("/roles", response_model=schemas.RoleRead, status_code=status.HTTP_201_CREATED)

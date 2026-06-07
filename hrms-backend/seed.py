@@ -9,20 +9,27 @@ async def seed_database():
     print("Connecting to database to seed tables...")
     async with AsyncSessionLocal() as session:
         try:
+            # Clear tables to ensure clean seed
+            print("Clearing existing records...")
+            await session.execute(text("DELETE FROM attendance_edits"))
+            await session.execute(text("DELETE FROM attendance"))
+            await session.execute(text("DELETE FROM employees"))
+            await session.execute(text("DELETE FROM users"))
+            await session.execute(text("DELETE FROM roles"))
+            await session.commit()
+
             # 1. Seed Roles
             roles = [
-                {"id": "6f307a09-ab0b-474d-bb66-42bf25472f3a", "name": "Super Admin", "description": "Full system access"},
-                {"id": "94d206da-6182-4f8a-8d68-8557a43d29eb", "name": "Admin", "description": "Administrative access"},
-                {"id": "b98208d4-cdc4-491a-9a9d-39c7b44caedb", "name": "Employee", "description": "Employee access"}
+                {"id": "6f307a09-ab0b-474d-bb66-42bf25472f3a", "name": "super_admin", "description": "Full system access"},
+                {"id": "94d206da-6182-4f8a-8d68-8557a43d29eb", "name": "admin", "description": "Administrative access"},
+                {"id": "b98208d4-cdc4-491a-9a9d-39c7b44caedb", "name": "employee", "description": "Employee access"}
             ]
             print("Seeding roles...")
             for r in roles:
-                res = await session.execute(text("SELECT 1 FROM roles WHERE name = :name"), {"name": r["name"]})
-                if not res.scalar():
-                    await session.execute(
-                        text("INSERT INTO roles (id, name, description) VALUES (:id, :name, :description)"),
-                        {"id": uuid.UUID(r["id"]), "name": r["name"], "description": r["description"]}
-                    )
+                await session.execute(
+                    text("INSERT INTO roles (id, name, description) VALUES (:id, :name, :description)"),
+                    {"id": uuid.UUID(r["id"]), "name": r["name"], "description": r["description"]}
+                )
             
             # 2. Seed Users
             users = [
@@ -32,12 +39,10 @@ async def seed_database():
             ]
             print("Seeding users...")
             for u in users:
-                res = await session.execute(text("SELECT 1 FROM users WHERE email = :email"), {"email": u["email"]})
-                if not res.scalar():
-                    await session.execute(
-                        text("INSERT INTO users (id, email, role_id, is_active) VALUES (:id, :email, :role_id, true)"),
-                        {"id": uuid.UUID(u["id"]), "email": u["email"], "role_id": uuid.UUID(u["role_id"])}
-                    )
+                await session.execute(
+                    text("INSERT INTO users (id, email, role_id, is_active) VALUES (:id, :email, :role_id, true)"),
+                    {"id": uuid.UUID(u["id"]), "email": u["email"], "role_id": uuid.UUID(u["role_id"])}
+                )
             
             # 3. Seed Employees
             employees = [

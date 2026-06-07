@@ -4,6 +4,8 @@ import { AuthProvider, useAuth } from './context/AuthContext';
 import { Sidebar } from './components/layout/Sidebar';
 import { DashboardPage } from './features/dashboard/DashboardPage';
 import { SuperAdminDashboardPage } from './features/dashboard/SuperAdminDashboardPage';
+import { AdminDashboardPage } from './features/dashboard/AdminDashboardPage';
+import { AccessDeniedPage } from './components/layout/AccessDeniedPage';
 import { AttendancePage } from './features/attendance/AttendancePage';
 import { AuditLogsPage } from './features/attendance/AuditLogsPage';
 import { ExportPage } from './features/attendance/ExportPage';
@@ -13,6 +15,7 @@ import { Button } from './components/ui/Button';
 
 // --- Login Screen component ---
 const LoginScreen: React.FC = () => {
+  const { error: contextError } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
@@ -47,6 +50,8 @@ const LoginScreen: React.FC = () => {
     }
   };
 
+  const displayError = error || contextError;
+
   return (
     <div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-slate-950 p-6">
       <div className="w-full max-w-md bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-8 rounded-2xl shadow-xl space-y-6">
@@ -55,9 +60,9 @@ const LoginScreen: React.FC = () => {
           <p className="text-sm text-slate-500 dark:text-slate-400">Sign in with Supabase Authentication to sync portal.</p>
         </div>
 
-        {error && (
+        {displayError && (
           <div className="p-3 bg-red-50 border border-red-200 text-red-700 rounded-lg text-xs font-semibold text-center">
-            {error}
+            {displayError}
           </div>
         )}
 
@@ -119,17 +124,42 @@ const ProtectedLayout: React.FC = () => {
     return <LoginScreen />;
   }
 
+  const role = employee?.role;
+
   return (
     <div className="flex h-screen bg-slate-50 dark:bg-slate-900 overflow-hidden">
       <Sidebar />
       <main className="flex-1 overflow-y-auto p-8 lg:p-10">
         <Routes>
-          <Route path="/" element={employee?.role === 'Super Admin' ? <SuperAdminDashboardPage /> : <DashboardPage />} />
-          <Route path="/attendance" element={<AttendancePage />} />
-          <Route path="/audit-logs" element={employee?.role === 'Super Admin' ? <AuditLogsPage /> : <Navigate to="/" />} />
-          <Route path="/export" element={employee?.role === 'Super Admin' ? <ExportPage /> : <Navigate to="/" />} />
-          <Route path="/employees/:id" element={employee?.role === 'Super Admin' ? <EmployeeDetailPage /> : <Navigate to="/" />} />
-          <Route path="*" element={<Navigate to="/" />} />
+          {/* Dashboard Redirector */}
+          <Route 
+            path="/" 
+            element={
+              role === 'super_admin' ? <Navigate to="/super-admin" replace /> :
+              role === 'admin' ? <Navigate to="/admin" replace /> :
+              role === 'employee' ? <Navigate to="/employee" replace /> :
+              <Navigate to="/access-denied" replace />
+            } 
+          />
+
+          {/* Employee Routes */}
+          <Route path="/employee" element={role === 'employee' ? <DashboardPage /> : <Navigate to="/access-denied" replace />} />
+          <Route path="/employee/attendance" element={role === 'employee' ? <AttendancePage /> : <Navigate to="/access-denied" replace />} />
+
+          {/* Admin Routes */}
+          <Route path="/admin" element={role === 'admin' || role === 'super_admin' ? <AdminDashboardPage /> : <Navigate to="/access-denied" replace />} />
+
+          {/* Super Admin Routes */}
+          <Route path="/super-admin" element={role === 'super_admin' ? <SuperAdminDashboardPage /> : <Navigate to="/access-denied" replace />} />
+          <Route path="/super-admin/employees/:id" element={role === 'super_admin' ? <EmployeeDetailPage /> : <Navigate to="/access-denied" replace />} />
+          <Route path="/super-admin/audit-logs" element={role === 'super_admin' ? <AuditLogsPage /> : <Navigate to="/access-denied" replace />} />
+          <Route path="/super-admin/export" element={role === 'super_admin' ? <ExportPage /> : <Navigate to="/access-denied" replace />} />
+
+          {/* Access Denied Page */}
+          <Route path="/access-denied" element={<AccessDeniedPage />} />
+
+          {/* Fallback */}
+          <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </main>
     </div>

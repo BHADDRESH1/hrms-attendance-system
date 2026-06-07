@@ -16,6 +16,14 @@ import { useAuth } from '../../context/AuthContext';
 
 export const Sidebar: React.FC = () => {
   const { employee, session, signOut } = useAuth();
+  const role = employee?.role;
+
+  const getRoleDisplayName = (r: string | undefined) => {
+    if (r === 'super_admin') return 'Principal Admin (Super Admin)';
+    if (r === 'admin') return 'HR Admin (Admin)';
+    if (r === 'employee') return 'Employee';
+    return 'User';
+  };
 
   const activeClass = "flex items-center gap-3 px-4 py-3 text-sm font-semibold text-primary-600 bg-primary-50 dark:bg-primary-950/30 rounded-xl transition-all duration-150";
   const inactiveClass = "flex items-center gap-3 px-4 py-3 text-sm font-medium text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-900 rounded-xl transition-all duration-150";
@@ -33,23 +41,29 @@ export const Sidebar: React.FC = () => {
       </div>
 
       <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
-        <NavLink to="/" className={({ isActive }) => isActive ? activeClass : inactiveClass}>
+        <NavLink 
+          to={role === 'super_admin' ? '/super-admin' : role === 'admin' ? '/admin' : '/employee'} 
+          className={({ isActive }) => isActive ? activeClass : inactiveClass}
+          end
+        >
           <LayoutDashboard size={18} />
           Dashboard
         </NavLink>
 
-        <NavLink to="/attendance" className={({ isActive }) => isActive ? activeClass : inactiveClass}>
-          <CalendarClock size={18} />
-          Attendance
-        </NavLink>
+        {role === 'employee' && (
+          <NavLink to="/employee/attendance" className={({ isActive }) => isActive ? activeClass : inactiveClass}>
+            <CalendarClock size={18} />
+            Attendance
+          </NavLink>
+        )}
 
-        {employee?.role === 'Super Admin' && (
+        {role === 'super_admin' && (
           <>
-            <NavLink to="/audit-logs" className={({ isActive }) => isActive ? activeClass : inactiveClass}>
+            <NavLink to="/super-admin/audit-logs" className={({ isActive }) => isActive ? activeClass : inactiveClass}>
               <FileText size={18} />
               Audit Logs
             </NavLink>
-            <NavLink to="/export" className={({ isActive }) => isActive ? activeClass : inactiveClass}>
+            <NavLink to="/super-admin/export" className={({ isActive }) => isActive ? activeClass : inactiveClass}>
               <Download size={18} />
               Export Data
             </NavLink>
@@ -115,8 +129,8 @@ export const Sidebar: React.FC = () => {
               <p className="text-sm font-semibold truncate text-slate-800 dark:text-slate-200">
                 {employee ? `${employee.first_name} ${employee.last_name}` : 'Portal Sync Error'}
               </p>
-              <p className="text-xs text-slate-500 dark:text-slate-400 truncate capitalize">
-                {employee ? employee.role : 'Check connection'}
+              <p className="text-xs text-slate-500 dark:text-slate-400 truncate font-semibold">
+                {getRoleDisplayName(role)}
               </p>
             </div>
             <button 

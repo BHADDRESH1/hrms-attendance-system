@@ -6,13 +6,11 @@ import { Button } from '../../components/ui/Button';
 import { 
   ArrowLeft, 
   User, 
-  Calendar, 
   Clock, 
   AlertCircle, 
   CalendarMinus, 
   Percent, 
   Hourglass,
-  HelpCircle,
   FileSpreadsheet,
   Edit,
   X,
@@ -417,7 +415,7 @@ export const EmployeeDetailPage: React.FC = () => {
                       <th className="p-4 text-center">Attendance Value</th>
                       <th className="p-4">Status</th>
                       <th className="p-4">Remarks</th>
-                      {adminUser?.role === 'Super Admin' && <th className="p-4 text-right">Actions</th>}
+                      {adminUser?.role === 'super_admin' && <th className="p-4 text-right">Actions</th>}
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100 dark:divide-slate-900">
@@ -444,7 +442,7 @@ export const EmployeeDetailPage: React.FC = () => {
                           </td>
                           <td className="p-4">{getStatusBadge(record.status)}</td>
                           <td className="p-4 text-slate-500 dark:text-slate-400 text-xs italic">{record.remarks || '--'}</td>
-                          {adminUser?.role === 'Super Admin' && (
+                          {adminUser?.role === 'super_admin' && (
                             <td className="p-4 text-right">
                               <button 
                                 onClick={() => handleOpenEditModal(record)}
