@@ -24,6 +24,12 @@ async def clock_in(
     """
     Log clock-in punch for the current authenticated employee.
     """
+    if current_emp.user.role.name != "Employee":
+        from fastapi import HTTPException
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only employees are allowed to mark attendance."
+        )
     return await service.punch_in(db, current_emp, punch)
 
 @router.post("/punch-out", response_model=schemas.AttendanceRead)
@@ -35,6 +41,12 @@ async def clock_out(
     """
     Log clock-out punch and compute total hours.
     """
+    if current_emp.user.role.name != "Employee":
+        from fastapi import HTTPException
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only employees are allowed to mark attendance."
+        )
     try:
         return await service.punch_out(db, current_emp, punch)
     except Exception as e:
@@ -54,6 +66,20 @@ async def get_my_history(
     Fetch history logs for the current authenticated employee.
     """
     return await service.get_attendance_history(db, current_emp.id, start_date, end_date)
+
+
+@router.get("/employee/{employee_id}/history", response_model=List[schemas.AttendanceRead])
+async def get_employee_history_admin(
+    employee_id: uuid.UUID,
+    start_date: date = Query(default_factory=lambda: date.today() - timedelta(days=30)),
+    end_date: date = Query(default_factory=date.today),
+    db: AsyncSession = Depends(get_db),
+    _auth = Depends(RoleChecker(allowed_roles=["Super Admin", "Admin"]))
+):
+    """
+    Fetch history logs for a specific employee (Admin/Super Admin only).
+    """
+    return await service.get_attendance_history(db, employee_id, start_date, end_date)
 
 @router.get("/daily", response_model=List[schemas.AttendanceRead])
 async def get_daily_logs(
@@ -114,6 +140,19 @@ async def get_super_admin_analytics(
     Fetch super admin dashboard analytics metrics.
     """
     return await service.get_super_admin_analytics(db, start_date, end_date)
+
+
+@router.get("/super-admin/employee-analytics", response_model=List[schemas.SuperAdminEmployeeAnalytics])
+async def get_super_admin_employee_analytics(
+    start_date: date = Query(default_factory=lambda: date.today() - timedelta(days=30)),
+    end_date: date = Query(default_factory=date.today),
+    db: AsyncSession = Depends(get_db),
+    _auth = Depends(RoleChecker(allowed_roles=["Super Admin"]))
+):
+    """
+    Fetch employee-wise metrics for the Super Admin analytics directory.
+    """
+    return await service.get_employee_wise_analytics(db, start_date, end_date)
 
 
 @router.patch("/{record_id}", response_model=schemas.AttendanceRead)

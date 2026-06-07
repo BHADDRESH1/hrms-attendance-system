@@ -23,7 +23,9 @@ class AttendanceRead(BaseModel):
     clock_in_location: Optional[str] = None
     clock_out_location: Optional[str] = None
     status: str
+    remarks: Optional[str] = None
     total_work_hours: Optional[float] = None
+    is_edited: bool = False
     created_at: datetime
     updated_at: datetime
 
@@ -76,6 +78,20 @@ class AttendanceUpdateAdmin(BaseModel):
     status: Optional[str] = None
     reason: str
 
+class SuperAdminEmployeeAnalytics(BaseModel):
+    employee_id: uuid.UUID
+    employee_id_code: str
+    employee_name: str
+    department: str
+    month: str
+    total_hours: float
+    present_days: int
+    half_days: int
+    leave_days: int
+    lop_days: int
+    permission_days: int
+    attendance_percentage: float
+    status: str
 
 class SuperAdminAuditLogResponse(BaseModel):
     id: uuid.UUID

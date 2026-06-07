@@ -58,6 +58,8 @@ class Employee(Base):
     last_name: Mapped[str] = mapped_column(String(100), nullable=False)
     phone: Mapped[Optional[str]] = mapped_column(String(20), nullable=True)
     joined_date: Mapped[date] = mapped_column(Date, default=date.today, nullable=False)
+    designation: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
+    reporting_manager: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
     
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())

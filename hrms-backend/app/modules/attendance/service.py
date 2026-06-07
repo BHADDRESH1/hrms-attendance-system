@@ -117,7 +117,7 @@ async def get_attendance_history(
         Attendance.employee_id == employee_id,
         Attendance.work_date >= start_date,
         Attendance.work_date <= end_date
-    ).order_by(Attendance.work_date.desc())
+    ).order_by(Attendance.work_date.desc()).options(selectinload(Attendance.edits))
     
     res = await db.execute(stmt)
     return list(res.scalars().all())
@@ -128,7 +128,8 @@ async def get_daily_attendance(
     work_date: date
 ) -> List[Attendance]:
     stmt = select(Attendance).where(Attendance.work_date == work_date).options(
-        selectinload(Attendance.employee)
+        selectinload(Attendance.employee),
+        selectinload(Attendance.edits)
     )
     res = await db.execute(stmt)
     return list(res.scalars().all())
@@ -228,6 +229,8 @@ async def review_attendance_edit(
             else:
                 attendance_rec.status = "present"
         
+        # Save edit reason to remarks
+        attendance_rec.remarks = f"[Approved Edit]: {edit_req.reason}"
         edit_req.new_status = attendance_rec.status
         db.add(attendance_rec)
         
@@ -353,6 +356,9 @@ async def update_attendance_admin(
             else:
                 record.status = "present"
                 
+    # Save override reason to remarks
+    record.remarks = f"[Super Admin Override]: {update_in.reason}"
+                 
     # Create approved edit request log for audit history
     edit_log = AttendanceEdit(
         attendance_id=record.id,
@@ -444,7 +450,8 @@ async def query_attendance_for_export(
 ) -> List[Attendance]:
     from app.modules.employees.models import Employee
     stmt = select(Attendance).join(Attendance.employee).options(
-        selectinload(Attendance.employee).selectinload(Employee.department)
+        selectinload(Attendance.employee).selectinload(Employee.department),
+        selectinload(Attendance.edits)
     )
     
     if department_id:
@@ -607,3 +614,83 @@ def generate_attendance_pdf(records: List[Attendance]) -> bytes:
     story.append(table)
     doc.build(story)
     return buffer.getvalue()
+
+
+async def get_employee_wise_analytics(
+    db: AsyncSession,
+    start_date: date,
+    end_date: date
+) -> List[dict]:
+    from app.modules.employees.models import Employee, Department, User
+    
+    # 1. Fetch all employees
+    stmt = select(Employee).options(
+        selectinload(Employee.department),
+        selectinload(Employee.user).selectinload(User.role)
+    )
+    res = await db.execute(stmt)
+    employees = res.scalars().all()
+    
+    # 2. Fetch all attendance records in range
+    stmt_att = select(Attendance).where(
+        Attendance.work_date >= start_date,
+        Attendance.work_date <= end_date
+    ).options(selectinload(Attendance.edits))
+    res_att = await db.execute(stmt_att)
+    records = res_att.scalars().all()
+    
+    # Group by employee
+    from collections import defaultdict
+    emp_records = defaultdict(list)
+    for r in records:
+        emp_records[r.employee_id].append(r)
+        
+    # Calculate working days (Mon-Fri)
+    working_days = 0
+    curr = start_date
+    while curr <= end_date:
+        if curr.weekday() < 5:
+            working_days += 1
+        curr += timedelta(days=1)
+        
+    analytics = []
+    month_str = start_date.strftime("%B %Y")
+    
+    for emp in employees:
+        # Skip admins/super admins if they don't represent employees
+        if emp.user.role.name in ["Super Admin", "Admin"]:
+            continue
+            
+        recs = emp_records[emp.id]
+        
+        total_hours = sum(r.total_work_hours for r in recs if r.total_work_hours is not None)
+        present = sum(1 for r in recs if r.status in ["present", "late"])
+        half = sum(1 for r in recs if r.status == "half_day")
+        leave = sum(1 for r in recs if r.status in ["leave", "on_leave"])
+        lop = sum(1 for r in recs if r.status in ["absent", "lop"])
+        permission = sum(1 for r in recs if r.status == "permission")
+        
+        # Attendance % = (Present Days * 1 + Half Days * 0.5) / Working Days * 100
+        effective_present = present + (half * 0.5)
+        attendance_percentage = (effective_present / working_days * 100) if working_days > 0 else 0.0
+        
+        status_str = "Active" if emp.user.is_active else "Suspended"
+        
+        analytics.append({
+            "employee_id": emp.id,
+            "employee_id_code": emp.employee_id_code,
+            "employee_name": f"{emp.first_name} {emp.last_name}",
+            "department": emp.department.name if emp.department else "N/A",
+            "month": month_str,
+            "total_hours": round(total_hours, 2),
+            "present_days": present,
+            "half_days": half,
+            "leave_days": leave,
+            "lop_days": lop,
+            "permission_days": permission,
+            "attendance_percentage": round(attendance_percentage, 1),
+            "status": status_str
+        })
+        
+    return analytics
+

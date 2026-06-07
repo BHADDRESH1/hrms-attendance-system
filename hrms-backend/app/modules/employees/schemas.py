@@ -70,6 +70,8 @@ class EmployeeBase(BaseModel):
     last_name: str = Field(..., max_length=100)
     phone: Optional[str] = Field(None, max_length=20)
     joined_date: date = Field(default_factory=date.today)
+    designation: Optional[str] = None
+    reporting_manager: Optional[str] = None
 
 class EmployeeCreate(EmployeeBase):
     id: Optional[uuid.UUID] = None # Will auto-generate unless specified
@@ -83,6 +85,8 @@ class EmployeeUpdate(BaseModel):
     phone: Optional[str] = None
     department_id: Optional[uuid.UUID] = None
     employee_id_code: Optional[str] = None
+    designation: Optional[str] = None
+    reporting_manager: Optional[str] = None
 
 class EmployeeRead(EmployeeBase):
     id: uuid.UUID

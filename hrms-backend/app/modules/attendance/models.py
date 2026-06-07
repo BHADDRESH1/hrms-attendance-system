@@ -23,6 +23,7 @@ class Attendance(Base):
     
     # 'present', 'late', 'absent', 'half_day', 'on_leave'
     status: Mapped[str] = mapped_column(String(50), default="absent", nullable=False)
+    remarks: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     
     total_work_hours: Mapped[Optional[float]] = mapped_column(Numeric(5, 2), nullable=True)
     
@@ -32,6 +33,14 @@ class Attendance(Base):
     # Relationships
     employee: Mapped["Employee"] = relationship(back_populates="attendance_records", foreign_keys=[employee_id])
     edits: Mapped[list["AttendanceEdit"]] = relationship(back_populates="attendance_record", cascade="all, delete-orphan")
+
+    @property
+    def is_edited(self) -> bool:
+        try:
+            # Check if any edits have been approved
+            return any(e.status == "approved" for e in self.edits)
+        except Exception:
+            return False
 
     __table_args__ = (
         UniqueConstraint("employee_id", "work_date", name="unique_employee_date"),

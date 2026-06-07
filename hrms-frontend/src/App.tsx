@@ -7,6 +7,7 @@ import { SuperAdminDashboardPage } from './features/dashboard/SuperAdminDashboar
 import { AttendancePage } from './features/attendance/AttendancePage';
 import { AuditLogsPage } from './features/attendance/AuditLogsPage';
 import { ExportPage } from './features/attendance/ExportPage';
+import { EmployeeDetailPage } from './features/employees/EmployeeDetailPage';
 import { supabase } from './lib/supabase';
 import { Button } from './components/ui/Button';
 
@@ -127,6 +128,7 @@ const ProtectedLayout: React.FC = () => {
           <Route path="/attendance" element={<AttendancePage />} />
           <Route path="/audit-logs" element={employee?.role === 'Super Admin' ? <AuditLogsPage /> : <Navigate to="/" />} />
           <Route path="/export" element={employee?.role === 'Super Admin' ? <ExportPage /> : <Navigate to="/" />} />
+          <Route path="/employees/:id" element={employee?.role === 'Super Admin' ? <EmployeeDetailPage /> : <Navigate to="/" />} />
           <Route path="*" element={<Navigate to="/" />} />
         </Routes>
       </main>
