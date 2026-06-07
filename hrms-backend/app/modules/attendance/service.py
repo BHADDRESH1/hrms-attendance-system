@@ -1,7 +1,7 @@
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from sqlalchemy.orm import selectinload
-from datetime import datetime, date, time, timedelta
+from datetime import datetime, date, time, timedelta, timezone
 from typing import List, Optional
 import uuid
 
@@ -36,11 +36,11 @@ async def punch_in(db: AsyncSession, employee: Employee, punch: schemas.Attendan
     if record and record.clock_in is not None:
         raise HRMSException(message="Already clocked in for today.", status_code=400)
     
-    now = datetime.now()
+    now = datetime.now(timezone.utc)
     status = "present"
     
     # Calculate late status
-    start_limit = datetime.combine(today, CORPORATE_START_TIME) + timedelta(minutes=GRACE_PERIOD_MINUTES)
+    start_limit = datetime.combine(today, CORPORATE_START_TIME, tzinfo=timezone.utc) + timedelta(minutes=GRACE_PERIOD_MINUTES)
     if now > start_limit:
         status = "late"
         
@@ -82,7 +82,7 @@ async def punch_out(db: AsyncSession, employee: Employee, punch: schemas.Attenda
     if record.clock_out is not None:
         raise HRMSException(message="Already clocked out for today.", status_code=400)
         
-    now = datetime.now()
+    now = datetime.now(timezone.utc)
     record.clock_out = now
     record.clock_out_ip = punch.clock_out_ip
     record.clock_out_location = punch.clock_out_location

@@ -15,7 +15,7 @@ import {
 import { useAuth } from '../../context/AuthContext';
 
 export const Sidebar: React.FC = () => {
-  const { employee, signOut } = useAuth();
+  const { employee, session, signOut } = useAuth();
 
   const activeClass = "flex items-center gap-3 px-4 py-3 text-sm font-semibold text-primary-600 bg-primary-50 dark:bg-primary-950/30 rounded-xl transition-all duration-150";
   const inactiveClass = "flex items-center gap-3 px-4 py-3 text-sm font-medium text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-900 rounded-xl transition-all duration-150";
@@ -105,18 +105,18 @@ export const Sidebar: React.FC = () => {
       </nav>
 
       {/* User profile footer */}
-      {employee && (
+      {(employee || session) && (
         <div className="p-4 border-t border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/30">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-full bg-primary-100 dark:bg-primary-950/50 flex items-center justify-center text-primary-700 dark:text-primary-300 font-bold uppercase">
-              {employee.first_name[0]}{employee.last_name[0]}
+              {employee ? `${employee.first_name[0]}${employee.last_name[0]}` : '??'}
             </div>
             <div className="flex-1 min-w-0">
               <p className="text-sm font-semibold truncate text-slate-800 dark:text-slate-200">
-                {employee.first_name} {employee.last_name}
+                {employee ? `${employee.first_name} ${employee.last_name}` : 'Portal Sync Error'}
               </p>
               <p className="text-xs text-slate-500 dark:text-slate-400 truncate capitalize">
-                {employee.role}
+                {employee ? employee.role : 'Check connection'}
               </p>
             </div>
             <button 
